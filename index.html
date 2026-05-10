@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AetherFS | 1-Person Company Command Center</title>
+    <style>
+        :root { --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --primary: #38bdf8; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .search-box { width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #334155; background: var(--card); color: white; font-size: 18px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .result-card { background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid var(--primary); transition: transform 0.2s; }
+        .result-card:hover { transform: translateY(-3px); }
+        .emp-id { font-size: 12px; color: var(--primary); font-weight: bold; text-transform: uppercase; }
+        .summary { margin-top: 10px; line-height: 1.6; color: #cbd5e1; }
+        .score-tag { display: inline-block; background: #0ea5e9; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; float: right; }
+        .loading { text-align: center; color: var(--primary); display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>AetherFS Search</h1>
+    <input type="text" id="searchInput" class="search-box" placeholder="พิมพ์สิ่งที่คุณอยากรู้เกี่ยวกับพนักงาน... (เช่น คนที่เก่ง PHP, พนักงานลาออกปีนี้)">
+    
+    <div id="loading" class="loading">กำลังค้นหาความหมายจาก 70,000 records...</div>
+    <div id="resultsArea"></div>
+</div>
+
+<script>
+    const searchInput = document.getElementById('searchInput');
+    const resultsArea = document.getElementById('resultsArea');
+    const loading = document.getElementById('loading');
+
+    // ใช้ Debounce เพื่อไม่ให้ยิง API บ่อยเกินไปขณะพิมพ์
+    let timeout = null;
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            performSearch(e.target.value);
+        }, 500);
+    });
+
+    async function performSearch(query) {
+        if (!query) { resultsArea.innerHTML = ''; return; }
+
+        loading.style.display = 'block';
+        resultsArea.innerHTML = '';
+
+        try {
+            const response = await fetch(`api/search.php?q=${encodeURIComponent(query)}`);
+            const result = await response.json();
+
+            loading.style.display = 'none';
+
+            if (result.total_found === 0) {
+                resultsArea.innerHTML = '<p style="text-align:center">ไม่พบพนักงานที่มีประวัติใกล้เคียงกับคำค้นหาของคุณ</p>';
+                return;
+            }
+
+            result.data.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+                card.innerHTML = `
+                    <span class="score-tag">Match Score: ${item.score}</span>
+                    <div class="emp-id">Employee ID: ${item.employee_id}</div>
+                    <div class="summary">${item.summary}</div>
+                `;
+                resultsArea.appendChild(card);
+            });
+        } catch (error) {
+            loading.style.display = 'none';
+            console.error('Search error:', error);
+        }
+    }
+</script>
+
+</body>
+</html>
